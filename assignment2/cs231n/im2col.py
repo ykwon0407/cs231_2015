@@ -30,7 +30,6 @@ def im2col_indices(x, field_height, field_width, padding=1, stride=1):
 
   k, i, j = get_im2col_indices(x.shape, field_height, field_width, padding,
                                stride)
-
   cols = x_padded[:, k, i, j]
   C = x.shape[1]
   cols = cols.transpose(1, 2, 0).reshape(field_height * field_width * C, -1)

@@ -80,7 +80,12 @@ def two_layer_net(X, model, y=None, reg=0.0):
   # Store the result in the scores variable, which should be an array of      #
   # shape (N, C).                                                             #
   #############################################################################
-  pass
+  num_trains = X.shape[0]
+  num_classes = W2.shape[1]
+  l1 = X.dot(W1)+b1 # N X H matrix
+  Z = (l1>0)*l1  # N X H matrix
+  l2 = Z.dot(W2)+b2 # N X C matrix
+  scores = l2
   #############################################################################
   #                              END OF YOUR CODE                             #
   #############################################################################
@@ -98,7 +103,15 @@ def two_layer_net(X, model, y=None, reg=0.0):
   # classifier loss. So that your results match ours, multiply the            #
   # regularization loss by 0.5                                                #
   #############################################################################
-  pass
+
+  f = (scores.T-np.max(scores, axis=1)).T
+  numer = np.exp(f) # N X C matrix
+  denom = np.sum(numer, axis=1)
+
+  ind = [xrange(num_trains), y]
+  loss = np.sum(-np.log(numer[ind]/denom))
+  loss /= num_trains
+  loss += 0.5 * reg * (np.sum(W1 * W1)+np.sum(W2 * W2))
   #############################################################################
   #                              END OF YOUR CODE                             #
   #############################################################################
@@ -110,7 +123,17 @@ def two_layer_net(X, model, y=None, reg=0.0):
   # and biases. Store the results in the grads dictionary. For example,       #
   # grads['W1'] should store the gradient on W1, and be a matrix of same size #
   #############################################################################
-  pass
+  ONE = np.ones((y.shape[0],))
+  dS = (numer.T/denom).T # N X C
+  dS[xrange(num_trains), y] -= 1
+  dS /= num_trains
+
+  dZ = dS.dot(W2.T)*(Z>0) # N X H
+
+  grads['W2'] = (Z.T).dot(dS) + reg * W2 # H X C matrix
+  grads['b2'] = ((ONE.T).dot(dS)) # C X 1 matrix
+  grads['W1'] = (X.T).dot(dZ) + reg * W1 # D X H
+  grads['b1'] = ((ONE.T).dot(dZ)) # H X 1
   #############################################################################
   #                              END OF YOUR CODE                             #
   #############################################################################
