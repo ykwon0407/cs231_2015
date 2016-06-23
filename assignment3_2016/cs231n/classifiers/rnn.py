@@ -135,7 +135,35 @@ class CaptioningRNN(object):
     # defined above to store loss and gradients; grads[k] should give the      #
     # gradients for self.params[k].                                            #
     ############################################################################
-    pass
+    
+    h0, h0_cache = affine_forward(features, W_proj, b_proj)
+    x, x_cache = word_embedding_forward(captions_in, W_embed)
+    out, out_cache = rnn_forward(x, h0, Wx, Wh, b)
+    vocabOut, vocabOut_cache = temporal_affine_forward(out, W_vocab, b_vocab)
+
+    loss, dout = temporal_softmax_loss(vocabOut, captions_out, mask, verbose=False)
+
+    dhid, dW_vocab, db_vocab = temporal_affine_backward(dout, vocabOut_cache)    
+    dx, dh0, dWx, dWh, db = rnn_backward(dhid, out_cache)
+    dW_embd = word_embedding_backward(dx, x_cache)
+    dfeatures, dW_proj, db_proj = affine_backward(dh0, h0_cache)
+
+    # Initialize word vectors
+    grads['W_embed'] = dW_embd
+
+    # Initialize CNN -> hidden state projection parameters
+    grads['W_proj'] = dW_proj
+    grads['b_proj'] = db_proj
+
+    # Initialize parameters for the RNN
+    grads['Wx'] = dWx
+    grads['Wh'] = dWh
+    grads['b'] = db
+
+    # Initialize output to vocab weights
+    grads['W_vocab'] = dW_vocab
+    grads['b_vocab'] = db_vocab
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -197,7 +225,17 @@ class CaptioningRNN(object):
     # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
     # a loop.                                                                 #
     ###########################################################################
-    pass
+    h0, _ = affine_forward(features, W_proj, b_proj)
+    for k in xrange(max_length):
+        word = np.ones((N, 1), dtype=np.int32) * self._start
+        x, _ = word_embedding_forward(word, W_embed)
+        
+        next_h, _ = rnn_step_forward(np.squeeze(x), h0, Wx, Wh, b)
+        h0 = next_h
+
+        vocabOut, _ = temporal_affine_forward(next_h.reshape((N,1,-1)), W_vocab, b_vocab)
+        captions[:,k] = np.argmax(np.squeeze(vocabOut), axis=1);
+        
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
